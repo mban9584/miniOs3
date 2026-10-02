@@ -11,7 +11,7 @@
 | 许可证 | **AGPL-3.0**（`LICENSE`、`NOTICE`、`CREDITS` 全部原样保留，未做任何修改） |
 | 文件数 | 1367 |
 | 内容一致性 | 已逐个校验：1367 个文件的 git blob SHA-1 与上游 `RELEASE.2025-04-22T22-12-26Z` 的 tree **全部相同**（2026-09-23 用 GitHub Trees API 比对） |
-| 提交历史 | 只有 1 个 commit——源码归档不含 git 历史，所以这里没有上游的 commit / tag / PR 记录 |
+| 提交历史 | 源码导入为 1 个快照 commit，后续提交记录本镜像的维护；源码归档不含上游的 commit / tag / PR 历史 |
 
 **仓库首页那份 `README.md` 是 MinIO 官方的**（快速开始、容器安装、S3 API 兼容性说明等），我没有改动它。
 本文件只记录"这个仓库是怎么来的、和上游有什么不同、怎么自己编译运行"。
@@ -55,12 +55,27 @@ helm-releases/         打包好的 chart（.tgz）
 buildscripts/          CI 用的脚本与测试语料
 dockerscripts/         容器入口脚本
 Dockerfile*            镜像构建（release / hotfix / old_cpu 等多份）
-.github/workflows/     上游 CI 配置——原样保留了。实测这些 job 基本只在 `pull_request` 上触发，
-                       唯一带 `push:` 的 vulncheck.yml 限定 `branches: [master]`，而本仓库默认分支是
-                       `main`，所以 push 不会自动跑 Actions。只有你在这个仓库上开 PR 时才会触发（且大多会
-                       因缺上游 secrets 失败）；想彻底关掉就去 Settings → Actions 把 workflow 权限设为默认。
+.github/workflows/     上游 CI 配置——文件原样保留。多数构建/测试只在目标为 `master` 的 PR 上触发；
+                       depsreview.yaml 和 typos.yml 不限定 PR 目标分支。vulncheck.yml 的 push 仅限
+                       `master`，所以推送到本仓库默认分支 `main` 不会触发它。issues.yaml 监听 Issue 事件。
+                       lock.yml 原本每天定时运行，已在本仓库的 Actions 设置中停用（原因见下文）。
 LICENSE / NOTICE / CREDITS   AGPL-3.0 正文、第三方声明（勿改）
 ```
+
+### Actions 维护记录（2026-10-02）
+
+2026-09-24 至 2026-10-02 的 9 次失败均来自 `Lock Threads`，不是 MinIO 编译或测试失败。
+`lock.yml` 使用旧版 `dessant/lock-threads@v3`，其参数校验将 `github-token` 长度限制为 100 字符，
+与当前 GitHub 自动提供的 token 不兼容，因此每天定时运行都会在参数检查阶段失败。
+
+本仓库用于保存固定版本源码快照，不需要自动锁定旧讨论，已通过 GitHub Actions 设置停用该工作流。
+这是仓库设置，不会改变上游工作流文件；在其他仓库导入此快照时，这个停用状态不会随文件复制。
+如需恢复锁帖功能，应先升级插件并核对新版本参数及权限，再启用工作流。
+历史失败记录保留供排查，停用后不再产生该任务的每日失败。
+
+其他工作流继续保留原设置；需要上游 secrets 的任务在本镜像中可能无法运行。
+如需停用某个工作流，可进入 Actions → 选择工作流 → 右上角菜单 → Disable workflow。
+如需关闭全部 Actions，可进入 Settings → Actions → General → Actions permissions → Disable actions。
 
 ---
 
